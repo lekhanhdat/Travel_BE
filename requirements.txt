@@ -1,0 +1,9 @@
+fastapi>=0.108.0
+uvicorn>=0.25.0
+gunicorn>=20.1.0
+serpapi>=0.1.5
+openai>=1.51.0
+firebase-admin>=6.5.0
+requests>=2.32.3
+python-dotenv
+python-multipart
