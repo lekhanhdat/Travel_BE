@@ -10,7 +10,7 @@ import json
 BASE_URL = "https://digital-ocean-fast-api-h9zys.ondigitalocean.app"
 
 # File ảnh của bạn
-IMAGE_PATH = "da-nang-thanh-pho-cua-nhung-cay-cau-07.jpg"
+IMAGE_PATH = "Dai-tho-tra-kieu-bao-tang-dieu-khac-cham-danang-fantasticity-com-1.jpg"
 
 def test_with_image():
     print("🚀 Testing backend với file ảnh thật")
@@ -36,7 +36,7 @@ def test_with_image():
             result = response.json()
             print("   ✅ Success!")
             print(f"   Name: {result.get('name', 'N/A')}")
-            print(f"   Description: {result.get('description', 'N/A')[:100]}...")
+            print(f"   Description: {result.get('description', 'N/A')[:1000]}...")
         else:
             print(f"   ❌ Error: {response.text}")
         
