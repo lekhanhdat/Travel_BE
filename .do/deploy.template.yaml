@@ -4,4 +4,4 @@ spec:
  - name: web
    git:
      branch: main
-     repo_clone_url: https://github.com/ashayas/digital-ocean-fast-api
+     repo_clone_url: https://github.com/lekhanhdat/Travel_BE

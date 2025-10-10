@@ -7,7 +7,7 @@ import requests
 import json
 
 # URL của bạn trên Digital Ocean
-BASE_URL = "https://digital-ocean-fast-api-ur4jn.ondigitalocean.app"
+BASE_URL = "https://digital-ocean-fast-api-h9zys.ondigitalocean.app"
 
 # File ảnh của bạn
 IMAGE_PATH = "thumb_660_33dd25ee-2e8c-4be8-be13-6fd92385abd2.jpg"

@@ -7,7 +7,7 @@ from firebase_admin import credentials, storage
 
 cred = credentials.Certificate("./privateKey.json")
 
-app = firebase_admin.initialize_app(cred, {"storageBucket": "test-ae08e.appspot.com"})
+app = firebase_admin.initialize_app(cred, {"storageBucket": "travel-app-backend-a9d5f.appspot.com"})
 
 bucket = storage.bucket()
 
