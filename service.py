@@ -38,10 +38,25 @@ available_object_titles = [
 ]
 
 
-cred = credentials.Certificate("./privateKey.json")
+# Firebase configuration using environment variables
+firebase_config = {
+    "type": "service_account",
+    "project_id": os.environ.get("FIREBASE_PROJECT_ID", "travel-app-backend-a9d5f"),
+    "private_key_id": "d078b3dcfc465cae4785c5dc877e96c9fab5613d",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCZ8hhM+t481we5\nqhJbtE6urx72KC5hKQwaxRMIPfoweqsxg6Tu2OK3tCSnFYuMTs2eUabePBpfNsI9\nyje8KRmXZ0HZOVkxNafejMYP0gjW5MwTiTaPCBh285yWIjJXg36fFCe1r5Hg7Xz4\n+Emp5XEtEvs7lQoCRAXcw+YfIMzpXgMBfeNyjQSafwpSQNIxFdoDdQP7OWZ02/le\nAAZV/f1AXfm61FWqT5OWr0+yHGYSwQZ2Vn1anoDax46935RjS8AK9FO8dBJdLAyM\nHdRExaKDVI43+uWy32H+seMizsO/4uKoE+dT+YEkTwRv6mUcwWnz5y+x606AUCwR\nCqdue8pDAgMBAAECggEAHOeAuotryL6S+8A7/C3pjBDjXlKDCskbNbeE8Eo6vHl7\nxSszf4kHYHiZXSnFbs2o+63XB+j/BpuQcuuR9Wk+HdhMW83RulSZtUZ3Nac486g3\nzP85WDer6EGrR+EZ1Kai0pmFLy7M1A+jJFfx9M1Yp57lvvUn0O8WrrG1dmjBMJuk\no7lbe5WW83bU7HNjGdMY7deZPtCGFLZilUYXBr8zTOSfFiIjKOatkUOlGKHvGUmS\nRx95fJduFepuqxISaFD/l2wQiHNrK6z3e/1y66+t9fF3sPm9N+mzehj19/P/2JC2\nDolB6wjhWaz9eWnqfz7aPqhx8HcDcTL8tqszDMkEuQKBgQDJ+t/J04CUy4R7EKbK\nUM5CcVgAmJowwhWFv8rGSbQRY7KnRgIjFZrGWF4hFXzWyWNp0nZwdLEFmR83fHtI\naWWUHb+7Q7T8HnMqQRvpEXdfLC6/NJjmOJ73rkZftr1bh+Dl7WstjYREnG5xlki4\nmAbp0Uq3W91G1lGXCy04AJyp9wKBgQDDHmsFRpC4xNn4ur14YfiaMYG/PeLI/VmN\n8V7ftJ0Y0ZT/zhFlTTRS6fNDSSegh2llc7fClTqBst17/F4g8bw7RYcmI9LBTE4B\n9VtGsi4gmsuQ7Ffcsxdhb049b/rb8VgK7vnanpnC3/+MacHhlme1glGPrkRflGPx\nluqG9Z6vFQKBgGgoGyd1DiWtHdBosdo6+WKCGKOWDk1+iKLEWMkQUO92vjZMf+Wf\nyoTmJQRilFIe4Ek94x3yzybX46U1aE3bLCrJfIoRTE+HVFRB5ya1fx1xJ1oqwX5X\nTILlOB07m0KMO4nWeSKwi7jmAn5IxY+LtmT1LNaJZP6WntSJSvRKPH/ZAoGAN/ve\nUSEyHRG+SPOrsYLKxdM2mxyymWC39VYwFpfIC3r2+X6y1xIT1UZzGfc/e3ve7dEK\nBLa0lsovaoe6qlEx5P/KC1N0ASpXp5AypFIzkf9YMTje7OAl8TryhAZBQCI7VMfE\nwMmI7LVAqZUeoA97qkS+Ci/CRnpZQtQ+boLDCRECgYA4F2gXYkGSJO5Z5dpZajs/\nZ98afTFXESC096OIyZfJJnzLBmxtwiLTu99q16/iuy7T76K/7lTqF/MdwMDrNNSQ\nNA7Niwt8TqgLhpYusWyFFNumUlNci9gYbUCAyi+30pQmWgOB5JXldGxMtUmY0Qpe\nxEJqRfOu2ob+pGf7WgFOIg==\n-----END PRIVATE KEY-----\n",
+    "client_email": "firebase-adminsdk-fbsvc@travel-app-backend-a9d5f.iam.gserviceaccount.com",
+    "client_id": "109334951653923558638",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40travel-app-backend-a9d5f.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+}
+
+cred = credentials.Certificate(firebase_config)
 
 firebase_app = firebase_admin.initialize_app(
-    cred, {"storageBucket": "travel-app-backend-a9d5f.appspot.com"}
+    cred, {"storageBucket": os.environ.get("FIREBASE_STORAGE_BUCKET", "travel-app-backend-a9d5f.appspot.com")}
 )
 
 bucket = storage.bucket()
