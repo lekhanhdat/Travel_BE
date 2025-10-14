@@ -12,11 +12,11 @@ from fastapi import UploadFile
 from firebase_admin import credentials, storage
 from openai import OpenAI
 
-from data import available_objects
+from data import available_objects  # Fallback data
+from nocodb_service import get_nocodb_service
 
 load_dotenv()
 
-# Khởi tạo clients với error handling
 try:
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     serp_client = serpapi.Client(api_key=os.environ.get("SERPAPI_KEY"))
@@ -24,8 +24,7 @@ except Exception as e:
     print(f"Error initializing API clients: {e}")
     client = None
     serp_client = None
-
-available_object_titles = [
+available_object_titles_fallback = [
     "Đài thờ Trà Kiệu",
     "Đản sinh Brahma",
     "Phù điêu Apsara (Trà Kiệu)",
@@ -38,7 +37,19 @@ available_object_titles = [
 ]
 
 
-# Firebase configuration using environment variables
+def get_available_object_titles():
+    try:
+        service = get_nocodb_service()
+        if service:
+            titles = service.get_object_titles()
+            if titles:
+                return titles
+        return available_object_titles_fallback
+    except Exception as e:
+        return available_object_titles_fallback
+
+
+available_object_titles = get_available_object_titles()
 firebase_config = {
     "type": "service_account",
     "project_id": os.environ.get("FIREBASE_PROJECT_ID", "travel-app-backend-a9d5f"),
@@ -64,22 +75,11 @@ bucket = storage.bucket()
 
 def upload_file(file: Any) -> str:
     try:
-        print("Firebase: Initializing upload...")
         file_id = str(uuid.uuid4()) + path.splitext(file.filename)[1]
         blob = bucket.blob(file_id)
-        print(f"Firebase: Created blob with ID: {file_id}")
-
-        # blob.upload_from_string(content, content_type=file.content_type)
         blob.upload_from_file(file.file, content_type=file.content_type)
-        print("Firebase: File uploaded successfully")
-        
         blob.make_public()
-        print("Firebase: File made public")
-        
-        url = blob.public_url
-        print(f"Firebase: Public URL: {url}")
-        return url
-        
+        return blob.public_url
     except Exception as e:
         print(f"Firebase upload error: {e}")
         import traceback
@@ -223,68 +223,46 @@ def image_to_url(image_file: UploadFile) -> str:
 
 def get_object_name(image_file: UploadFile) -> Any:
     try:
-        print("=== Starting image processing ===")
-        
-        # Upload image to ImgBB (thay vì Firebase)
-        print("Step 1: Uploading to ImgBB...")
         url = image_to_url(image_file)
         if not url:
-            print("❌ ImgBB upload failed, trying Firebase...")
             url = upload_file(image_file)
             if not url:
-                print("❌ Both ImgBB and Firebase upload failed")
                 return "Không thể upload hình ảnh"
-        
-        print("✅ Image upload successful:", url)
 
-        # Get Google Lens results
-        print("Step 2: Calling Google Lens API...")
         google_len_result = get_google_len_result(url)
         if not google_len_result:
-            print("❌ Google Lens API failed or no results")
             return "Không tìm thấy thông tin về hiện vật từ Google Lens"
-        
-        google_len_titles = [x.get("title", "") for x in google_len_result if x.get("title")]
-        print("✅ Google Lens results:", google_len_titles)
 
-        # Get object name from OpenAI
-        print("Step 3: Calling OpenAI for object name...")
+        google_len_titles = [x.get("title", "") for x in google_len_result if x.get("title")]
+
         name = openai_get_object_name(google_len_titles)
-        print("✅ OpenAI detected name:", name)
-        
-        # Check if it's in our database
-        print("Step 4: Checking against database...")
         available_name = openai_get_available_object_name(name)
-        print("✅ Database check result:", available_name)
 
         if available_name == "None":
             return name
         else:
             return available_name
-            
+
     except Exception as e:
-        print(f"❌ Error in get_object_name: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error in get_object_name: {e}")
         return "Lỗi khi xử lý hình ảnh"
 
 
 def get_full_description(name: str):
-    if name in available_object_titles:
-        # find object in data
-        for obj in available_objects:
-            if obj["title"] == name:
-                return obj["content"]
-    else:
+    try:
+        service = get_nocodb_service()
+        if service:
+            nocodb_obj = service.get_object_by_title(name)
+            if nocodb_obj and nocodb_obj.get("content"):
+                return nocodb_obj["content"]
+
+        if name in available_object_titles_fallback:
+            for obj in available_objects:
+                if obj["title"] == name:
+                    return obj["content"]
+
         return openai_get_full_description(name)
 
-
-# image_file = request.files["image_file"]
-# name = get_object_name()
-# full_description = get_full_description(name)
-#
-# response = {
-#     "name": name,
-#     "description": full_description,
-# }
-# return response
+    except Exception as e:
+        print(f"Error getting description for '{name}': {e}")
+        return openai_get_full_description(name)
