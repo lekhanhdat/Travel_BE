@@ -106,21 +106,32 @@ def create_payment_link(amount: int, user_id: Optional[int] = None, description:
         )
         response.raise_for_status()
         data = response.json()
+
+        # Log response for debugging
+        print(f"PayOS API Response: {data}")
+
     except requests.exceptions.RequestException as e:
         # Log detailed error for debugging
         error_msg = f"PayOS API Error: {str(e)}"
         if hasattr(e, 'response') and e.response is not None:
             error_msg += f" | Status: {e.response.status_code} | Response: {e.response.text}"
         raise ValueError(error_msg)
-    
+
+    # PayOS response format: {"code": "00", "desc": "success", "data": {...}}
+    # Extract data from nested structure
+    if "data" in data:
+        payment_data = data["data"]
+    else:
+        payment_data = data
+
     # Extract response data
     result = {
-        "orderCode": data.get("orderCode") or order_code,
-        "paymentLinkId": data.get("paymentLinkId", ""),
-        "qrCode": data.get("qrCode", ""),  # Base64 QR code
-        "checkoutUrl": data.get("checkoutUrl", ""),
+        "orderCode": payment_data.get("orderCode") or order_code,
+        "paymentLinkId": payment_data.get("paymentLinkId", ""),
+        "qrCode": payment_data.get("qrCode", ""),  # Base64 QR code
+        "checkoutUrl": payment_data.get("checkoutUrl", ""),
     }
-    
+
     return result
 
 
