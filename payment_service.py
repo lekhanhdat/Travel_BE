@@ -18,7 +18,7 @@ PAYOS_API_KEY = os.getenv("PAYOS_API_KEY", "")
 PAYOS_CHECKSUM_KEY = os.getenv("PAYOS_CHECKSUM_KEY", "")
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://digital-ocean-fast-api-h9zys.ondigitalocean.app")
 
-PAYOS_API_URL = "https://api.payos.vn/v2/payment-requests"
+PAYOS_API_URL = "https://api-merchant.payos.vn/v2/payment-requests"
 
 
 def generate_signature(data: Dict[str, Any]) -> str:
@@ -96,11 +96,22 @@ def create_payment_link(amount: int, user_id: Optional[int] = None, description:
         "x-api-key": PAYOS_API_KEY,
         "Content-Type": "application/json",
     }
-    
-    response = requests.post(PAYOS_API_URL, json=payload, headers=headers)
-    response.raise_for_status()
-    
-    data = response.json()
+
+    try:
+        response = requests.post(
+            PAYOS_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=30  # 30 seconds timeout
+        )
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        # Log detailed error for debugging
+        error_msg = f"PayOS API Error: {str(e)}"
+        if hasattr(e, 'response') and e.response is not None:
+            error_msg += f" | Status: {e.response.status_code} | Response: {e.response.text}"
+        raise ValueError(error_msg)
     
     # Extract response data
     result = {
