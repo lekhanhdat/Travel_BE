@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 import re
+import os
 
 # from service import get_full_description, get_object_name
 from service import get_full_description, get_object_name
