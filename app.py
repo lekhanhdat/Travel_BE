@@ -5,7 +5,7 @@ import re
 
 # from service import get_full_description, get_object_name
 from service import get_full_description, get_object_name
-from payment_service import create_payment_link, get_payment_status, verify_webhook_signature
+from payment_service import create_payment_link, get_payment_status, verify_webhook_signature, confirm_webhook
 from nocodb_service import create_transaction, update_user_balance, get_user_by_id
 
 app = FastAPI()
@@ -139,3 +139,21 @@ async def payment_return():
 async def payment_cancel():
     """Cancel URL after cancelled payment"""
     return {"message": "Payment cancelled."}
+
+
+@app.post("/payment/setup-webhook")
+async def setup_webhook():
+    """
+    Setup/confirm webhook URL with PayOS
+    This endpoint should be called once to register the webhook
+    """
+    try:
+        webhook_url = f"{os.getenv('PUBLIC_BASE_URL', 'https://digital-ocean-fast-api-h9zys.ondigitalocean.app')}/webhook/payos"
+        result = confirm_webhook(webhook_url)
+        return {
+            "success": True,
+            "message": f"Webhook registered successfully: {webhook_url}",
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to setup webhook: {str(e)}")

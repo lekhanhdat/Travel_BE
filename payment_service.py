@@ -116,33 +116,33 @@ def create_payment_link(amount: int, user_id: Optional[int] = None, description:
 def get_payment_status(order_code: int) -> Dict[str, Any]:
     """
     Get payment status from PayOS
-    
+
     Args:
         order_code: Order code to check
-        
+
     Returns:
         Dict with status, amountPaid, orderCode, paymentLinkId
     """
     if not PAYOS_CLIENT_ID or not PAYOS_API_KEY:
         raise ValueError("PayOS credentials not configured")
-    
+
     headers = {
         "x-client-id": PAYOS_CLIENT_ID,
         "x-api-key": PAYOS_API_KEY,
     }
-    
+
     url = f"{PAYOS_API_URL}/{order_code}"
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code == 404:
         return {
             "status": "PENDING",
             "orderCode": order_code,
         }
-    
+
     response.raise_for_status()
     data = response.json()
-    
+
     # Map PayOS status to our status
     payos_status = data.get("status", "PENDING")
     status_map = {
@@ -152,11 +152,44 @@ def get_payment_status(order_code: int) -> Dict[str, Any]:
         "CANCELLED": "CANCELLED",
         "EXPIRED": "EXPIRED",
     }
-    
+
     return {
         "status": status_map.get(payos_status, "PENDING"),
         "amountPaid": data.get("amountPaid"),
         "orderCode": data.get("orderCode"),
         "paymentLinkId": data.get("paymentLinkId"),
     }
+
+
+def confirm_webhook(webhook_url: str) -> Dict[str, Any]:
+    """
+    Register/confirm webhook URL with PayOS
+    This replaces the manual webhook configuration in PayOS dashboard
+
+    Args:
+        webhook_url: Your webhook endpoint URL (e.g., https://your-domain.com/webhook/payos)
+
+    Returns:
+        Dict with confirmation result
+    """
+    if not PAYOS_CLIENT_ID or not PAYOS_API_KEY:
+        raise ValueError("PayOS credentials not configured")
+
+    headers = {
+        "x-client-id": PAYOS_CLIENT_ID,
+        "x-api-key": PAYOS_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    # PayOS webhook confirmation endpoint
+    url = "https://api.payos.vn/v2/webhook-url"
+
+    payload = {
+        "webhookUrl": webhook_url
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+
+    return response.json()
 
