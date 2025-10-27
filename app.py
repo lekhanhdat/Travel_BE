@@ -142,21 +142,23 @@ async def payment_cancel():
     return {"message": "Payment cancelled."}
 
 
-@app.get("/payment/setup-webhook")
-@app.post("/payment/setup-webhook")
-async def setup_webhook():
+@app.get("/payment/webhook-info")
+async def webhook_info():
     """
-    Setup/confirm webhook URL with PayOS
-    This endpoint should be called once to register the webhook
-    Supports both GET and POST methods for easy browser testing
+    Get webhook URL information
+    PayOS will automatically send webhook to this URL after payment
+    You need to configure this URL in PayOS dashboard manually
     """
-    try:
-        webhook_url = f"{os.getenv('PUBLIC_BASE_URL', 'https://digital-ocean-fast-api-h9zys.ondigitalocean.app')}/webhook/payos"
-        result = confirm_webhook(webhook_url)
-        return {
-            "success": True,
-            "message": f"Webhook registered successfully: {webhook_url}",
-            "data": result
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to setup webhook: {str(e)}")
+    webhook_url = f"{os.getenv('PUBLIC_BASE_URL', 'https://digital-ocean-fast-api-h9zys.ondigitalocean.app')}/webhook/payos"
+    return {
+        "success": True,
+        "webhookUrl": webhook_url,
+        "message": "Configure this webhook URL in PayOS dashboard at https://my.payos.vn",
+        "instructions": [
+            "1. Login to https://my.payos.vn",
+            "2. Go to your payment channel settings",
+            "3. Find 'Webhook URL' field",
+            f"4. Enter: {webhook_url}",
+            "5. Save settings"
+        ]
+    }
