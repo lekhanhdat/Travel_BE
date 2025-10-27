@@ -75,14 +75,18 @@ def create_payment_link(amount: int, user_id: Optional[int] = None, description:
 
         # Log response for debugging
         print(f"PayOS API Response: {response}")
+        print(f"QR Code length: {len(response.qr_code) if response.qr_code else 0}")
+        print(f"QR Code value: {response.qr_code}")
 
         # Extract response data
         result = {
             "orderCode": response.order_code,
             "paymentLinkId": response.payment_link_id or "",
-            "qrCode": response.qr_code or "",  # Base64 QR code
+            "qrCode": response.qr_code or "",  # QR code string (not base64)
             "checkoutUrl": response.checkout_url or "",
         }
+
+        print(f"Result qrCode length: {len(result['qrCode'])}")
 
         return result
 
