@@ -134,3 +134,128 @@ def get_nocodb_service() -> NocoDBService:
             print(f"Failed to initialize NocoDB service: {e}")
             nocodb_service = None
     return nocodb_service
+
+
+# ============ Payment-specific functions ============
+
+ACCOUNTS_TABLE_ID = os.getenv("NOCODB_ACCOUNTS_TABLE_ID", "mad8fvjhd0ba1bk")
+TRANSACTIONS_TABLE_ID = os.getenv("NOCODB_TRANSACTIONS_TABLE_ID", "md6twc3losjv4j3")
+
+
+def create_transaction(
+    account_id: Optional[int],
+    amount: int,
+    description: str,
+    order_code: int,
+    payment_link_id: str,
+    status: str = "PAID"
+) -> Optional[int]:
+    """
+    Create a transaction record in NocoDB
+
+    Returns:
+        Transaction ID if successful, None otherwise
+    """
+    if not TRANSACTIONS_TABLE_ID:
+        print("Warning: NOCODB_TRANSACTIONS_TABLE_ID not configured, skipping transaction creation")
+        return None
+
+    try:
+        base_url = os.environ.get("NOCODB_BASE_URL", "https://app.nocodb.com")
+        api_token = os.environ.get("NOCODB_API_TOKEN")
+
+        headers = {
+            "xc-token": api_token,
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "accountId": account_id,
+            "amount": amount,
+            "description": description,
+            "orderCode": order_code,
+            "paymentLinkId": payment_link_id,
+            "status": status,
+        }
+
+        url = f"{base_url}/api/v2/tables/{TRANSACTIONS_TABLE_ID}/records"
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+
+        result = response.json()
+        return result.get("Id")
+
+    except Exception as e:
+        print(f"Error creating transaction: {e}")
+        return None
+
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Get user account by ID
+    """
+    try:
+        base_url = os.environ.get("NOCODB_BASE_URL", "https://app.nocodb.com")
+        api_token = os.environ.get("NOCODB_API_TOKEN")
+
+        headers = {
+            "xc-token": api_token,
+            "Content-Type": "application/json"
+        }
+
+        url = f"{base_url}/api/v2/tables/{ACCOUNTS_TABLE_ID}/records/{user_id}"
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        return response.json()
+
+    except Exception as e:
+        print(f"Error getting user {user_id}: {e}")
+        return None
+
+
+def update_user_balance(user_id: int, amount_delta: int) -> Optional[float]:
+    """
+    Update user balance by adding amount_delta
+
+    Args:
+        user_id: User account ID
+        amount_delta: Amount to add (can be negative)
+
+    Returns:
+        New balance if successful, None otherwise
+    """
+    try:
+        # Get current user
+        user = get_user_by_id(user_id)
+        if not user:
+            print(f"User {user_id} not found")
+            return None
+
+        # Calculate new balance
+        current_balance = float(user.get("balance", 0))
+        new_balance = current_balance + amount_delta
+
+        # Update balance
+        base_url = os.environ.get("NOCODB_BASE_URL", "https://app.nocodb.com")
+        api_token = os.environ.get("NOCODB_API_TOKEN")
+
+        headers = {
+            "xc-token": api_token,
+            "Content-Type": "application/json"
+        }
+
+        url = f"{base_url}/api/v2/tables/{ACCOUNTS_TABLE_ID}/records"
+        data = {
+            "Id": user_id,
+            "balance": new_balance
+        }
+
+        response = requests.patch(url, headers=headers, json=data)
+        response.raise_for_status()
+
+        return new_balance
+
+    except Exception as e:
+        print(f"Error updating balance for user {user_id}: {e}")
+        return None
