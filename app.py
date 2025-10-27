@@ -142,11 +142,13 @@ async def payment_cancel():
     return {"message": "Payment cancelled."}
 
 
+@app.get("/payment/setup-webhook")
 @app.post("/payment/setup-webhook")
 async def setup_webhook():
     """
     Setup/confirm webhook URL with PayOS
     This endpoint should be called once to register the webhook
+    Supports both GET and POST methods for easy browser testing
     """
     try:
         webhook_url = f"{os.getenv('PUBLIC_BASE_URL', 'https://digital-ocean-fast-api-h9zys.ondigitalocean.app')}/webhook/payos"
