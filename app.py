@@ -1,15 +1,51 @@
-from fastapi import FastAPI, UploadFile, HTTPException, Request
+﻿from fastapi import FastAPI, UploadFile, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
+from contextlib import asynccontextmanager
 import re
 import os
 
-# from service import get_full_description, get_object_name
 from service import get_full_description, get_object_name
 from payment_service import create_payment_link, get_payment_status, verify_webhook_signature, confirm_webhook
 from nocodb_service import create_transaction, update_user_balance, get_user_by_id
 
-app = FastAPI()
+# Import semantic search routers
+from routers import search_router, chat_router, memory_router, recommendations_router
+
+# Import startup indexer for cost-optimized demo deployment
+from utils.startup_indexer import check_and_rebuild_indexes_on_startup, get_index_stats
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup/shutdown"""
+    # Startup: Build FAISS indexes if needed
+    print("Starting up...")
+    try:
+        await check_and_rebuild_indexes_on_startup()
+        stats = get_index_stats()
+        print(f"Index stats: {stats}")
+    except Exception as e:
+        print(f"Warning: Index startup failed: {e}")
+    
+    yield  # App is running
+    
+    # Shutdown
+    print("Shutting down...")
+
+
+app = FastAPI(
+    title="Travel App API",
+    description="Backend API for Travel App with Semantic Search capabilities",
+    version="2.0.0",
+    lifespan=lifespan
+)
+
+# Include semantic search routers
+app.include_router(search_router)
+app.include_router(chat_router)
+app.include_router(memory_router)
+app.include_router(recommendations_router)
 
 
 # Payment request models
@@ -21,19 +57,14 @@ class CreatePaymentRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Hello World", "version": "2.0.0", "features": ["semantic-search", "rag-chat", "recommendations"]}
 
 
 @app.post("/detect")
 def detect(image_file: UploadFile):
     name = get_object_name(image_file)
     full_description = get_full_description(name)
-
-    # return full_description
-    return {
-        "name": name,
-        "description": full_description,
-    }
+    return {"name": name, "description": full_description}
 
 @app.post('/detect/test')
 def test_detect(image_file: UploadFile):
@@ -44,19 +75,10 @@ def test_detect(image_file: UploadFile):
 
 @app.post("/payments/create")
 async def create_payment(req: CreatePaymentRequest):
-    """
-    Create a payment link with PayOS
-    """
     try:
         if req.amount < 1000:
             raise HTTPException(status_code=400, detail="Amount must be at least 1,000 VND")
-
-        result = create_payment_link(
-            amount=req.amount,
-            user_id=req.userId,
-            description=req.description
-        )
-
+        result = create_payment_link(amount=req.amount, user_id=req.userId, description=req.description)
         return result
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -66,9 +88,6 @@ async def create_payment(req: CreatePaymentRequest):
 
 @app.get("/payments/status/{order_code}")
 async def payment_status(order_code: int):
-    """
-    Get payment status from PayOS
-    """
     try:
         result = get_payment_status(order_code)
         return result
@@ -78,53 +97,30 @@ async def payment_status(order_code: int):
 
 @app.post("/webhook/payos")
 async def payos_webhook(request: Request):
-    """
-    Webhook endpoint for PayOS payment notifications
-    """
     try:
         body = await request.json()
         data = body.get("data", body)
-
-        # Verify signature (optional but recommended)
-        signature = body.get("signature", "")
-        # if signature and not verify_webhook_signature(data, signature):
-        #     raise HTTPException(status_code=400, detail="Invalid signature")
-
-        # Extract payment info
         order_code = data.get("orderCode")
         amount = data.get("amount")
         description = data.get("description", "")
         payment_link_id = data.get("paymentLinkId", "")
         status = data.get("status", "PAID")
 
-        # Parse user ID from description (format: "Donation from user {userId}")
         user_id = None
         match = re.search(r"user (\d+)", description)
         if match:
             user_id = int(match.group(1))
 
-        # Create transaction record in NocoDB
         transaction_id = create_transaction(
-            account_id=user_id,
-            amount=amount,
-            description=description,
-            order_code=order_code,
-            payment_link_id=payment_link_id,
-            status=status
+            account_id=user_id, amount=amount, description=description,
+            order_code=order_code, payment_link_id=payment_link_id, status=status
         )
 
-        # Update user balance if user_id exists and payment is successful
         if user_id and status == "PAID":
             new_balance = update_user_balance(user_id, amount)
             print(f"Updated balance for user {user_id}: {new_balance}")
 
-        return {
-            "received": True,
-            "transactionId": transaction_id,
-            "userId": user_id,
-            "amount": amount
-        }
-
+        return {"received": True, "transactionId": transaction_id, "userId": user_id, "amount": amount}
     except Exception as e:
         print(f"Webhook error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
@@ -132,23 +128,16 @@ async def payos_webhook(request: Request):
 
 @app.get("/payment/return")
 async def payment_return():
-    """Return URL after successful payment"""
     return {"message": "Payment successful! You can close this page."}
 
 
 @app.get("/payment/cancel")
 async def payment_cancel():
-    """Cancel URL after cancelled payment"""
     return {"message": "Payment cancelled."}
 
 
 @app.get("/payment/webhook-info")
 async def webhook_info():
-    """
-    Get webhook URL information
-    PayOS will automatically send webhook to this URL after payment
-    You need to configure this URL in PayOS dashboard manually
-    """
     webhook_url = f"{os.getenv('PUBLIC_BASE_URL', 'https://digital-ocean-fast-api-h9zys.ondigitalocean.app')}/webhook/payos"
     return {
         "success": True,
@@ -161,4 +150,22 @@ async def webhook_info():
             f"4. Enter: {webhook_url}",
             "5. Save settings"
         ]
+    }
+
+
+# ============ Health Check ============
+
+@app.get("/health")
+async def health_check():
+    stats = get_index_stats()
+    return {
+        "status": "healthy",
+        "version": "2.0.0",
+        "index_stats": stats,
+        "services": {
+            "core": "operational",
+            "semantic_search": "operational" if stats["text_vectors"] > 0 else "initializing",
+            "rag_chat": "operational",
+            "recommendations": "operational"
+        }
     }

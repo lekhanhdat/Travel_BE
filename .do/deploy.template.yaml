@@ -1,7 +1,39 @@
-spec:
- name: digital-ocean-fast-api
- services:
- - name: web
-   git:
-     branch: main
-     repo_clone_url: https://github.com/lekhanhdat/Travel_BE
+﻿spec:
+  name: digital-ocean-fast-api
+  region: sgp
+  services:
+    - name: web
+      git:
+        branch: main
+        repo_clone_url: https://github.com/lekhanhdat/Travel_BE
+      environment_slug: python
+      instance_size_slug: basic-xxs
+      instance_count: 1
+      http_port: 8080
+      routes:
+        - path: /
+      build_command: pip install -r requirements.txt
+      run_command: gunicorn -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8080 --worker-tmp-dir /dev/shm app:app
+      envs:
+        - key: OPENAI_API_KEY
+          type: SECRET
+        - key: NOCODB_BASE_URL
+          value: "https://app.nocodb.com"
+        - key: NOCODB_API_TOKEN
+          type: SECRET
+        - key: NOCODB_LOCATIONS_TABLE_ID
+          value: "mfz84cb0t9a84jt"
+        - key: NOCODB_FESTIVALS_TABLE_ID
+          value: "mktzgff8mpu2c32"
+        - key: NOCODB_ITEMS_TABLE_ID
+          value: "m0s4uwjesun4rl9"
+        - key: FAISS_INDEX_DIR
+          value: "./faiss_indexes"
+        - key: PAYOS_CLIENT_ID
+          type: SECRET
+        - key: PAYOS_API_KEY
+          type: SECRET
+        - key: PAYOS_CHECKSUM_KEY
+          type: SECRET
+        - key: PUBLIC_BASE_URL
+          value: "https://digital-ocean-fast-api-h9zys.ondigitalocean.app"
