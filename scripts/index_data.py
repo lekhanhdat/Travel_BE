@@ -76,7 +76,12 @@ def get_content_hash(content: str) -> str:
 
 
 def build_text_for_embedding(entity: Dict, entity_type: str) -> str:
-    """Build text content for embedding generation"""
+    """
+    Build text content for embedding generation.
+    
+    Combines title, description, long_description, and entity-specific fields
+    for comprehensive semantic search matching.
+    """
     parts = []
     
     # Title/Name
@@ -84,10 +89,16 @@ def build_text_for_embedding(entity: Dict, entity_type: str) -> str:
     if title:
         parts.append(f"Title: {title}")
     
-    # Description/Content
+    # Short Description
     description = entity.get("description") or entity.get("content") or entity.get("Description") or ""
     if description:
         parts.append(f"Description: {description[:1000]}")  # Limit length
+    
+    # Long Description (for more detailed semantic matching)
+    # This field provides richer content for better search accuracy
+    long_description = entity.get("long_description") or entity.get("Long_description") or ""
+    if long_description:
+        parts.append(f"Details: {long_description[:2000]}")  # Allow more content for detailed matching
     
     # Location-specific fields
     if entity_type == "location":
