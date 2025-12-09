@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, UploadFile, HTTPException, Request
+from fastapi import FastAPI, UploadFile, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from contextlib import asynccontextmanager
@@ -107,13 +107,20 @@ async def payos_webhook(request: Request):
         status = data.get("status", "PAID")
 
         user_id = None
+        user_name = None
         match = re.search(r"user (\d+)", description)
         if match:
             user_id = int(match.group(1))
+            # Look up user to get their userName
+            user_data = get_user_by_id(user_id)
+            if user_data:
+                user_name = user_data.get("userName")
+                print(f"Found user {user_id} with userName: {user_name}")
 
         transaction_id = create_transaction(
             account_id=user_id, amount=amount, description=description,
-            order_code=order_code, payment_link_id=payment_link_id, status=status
+            order_code=order_code, payment_link_id=payment_link_id, status=status,
+            user_name=user_name
         )
 
         if user_id and status == "PAID":

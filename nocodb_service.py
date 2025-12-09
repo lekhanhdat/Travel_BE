@@ -148,7 +148,8 @@ def create_transaction(
     description: str,
     order_code: int,
     payment_link_id: str,
-    status: str = "PAID"
+    status: str = "PAID",
+    user_name: Optional[str] = None
 ) -> Optional[int]:
     """
     Create a transaction record in NocoDB
@@ -175,6 +176,7 @@ def create_transaction(
 
         data = {
             "accountId": account_id,
+            "userName": user_name,
             "amount": amount,
             "description": description,
             "orderCode": order_code,
